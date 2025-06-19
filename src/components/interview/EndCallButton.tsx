@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { PhoneOff, Loader2 } from "lucide-react"
+import { useAuthStore } from "@/store/useAuthStore"
 
-// Updated to match your actual API endpoint
-const endInterview = async (roomCode: string) => {
+const endInterview = async (roomCode: string, token: string | null) => {
   const response = await fetch(`/api/interview/end`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
     },
     body: JSON.stringify({ roomCode }),
   })
@@ -24,56 +25,45 @@ const endInterview = async (roomCode: string) => {
 }
 
 interface EndCallButtonProps {
-  roomCode?: string;
-  endInterviewSession: () => void;
+  endInterviewSession?: () => void;
 }
 
-export default function EndCallButton({ roomCode, endInterviewSession }: EndCallButtonProps) {
+export default function EndCallButton({ endInterviewSession }: EndCallButtonProps) {
   const call = useCall()
   const router = useRouter()
+  const token = useAuthStore((state) => state.token)
 
-  // Extract roomCode from call ID if not provided as prop
-  const currentRoomCode = roomCode || call?.id
+  const currentRoomCode = call?.id
 
   const endCallMutation = useMutation({
     mutationFn: () => {
-      if (!currentRoomCode) {
-        throw new Error("Room code not available")
-      }
-      return endInterview(currentRoomCode)
+      if (!currentRoomCode) throw new Error("Room code not available")
+      return endInterview(currentRoomCode, token)
     },
     onSuccess: (data) => {
-        const reportApiUrl = data.reportUrl.replace('/reports/', '/api/reports/');
-        toast.success("Interview ended & report generated.", { 
-          action: {
-            label: "View Report",
-            onClick: () => window.open(reportApiUrl, '_blank')
-          }
-        });
-        router.push('/dashboard');
+      toast.success("Interview ended & report generated.", { 
+        action: {
+          label: "View Report",
+          onClick: () => window.open(data.reportUrl, '_blank')
+        }
+      });
+      router.push('/dashboard');
     },
     onError: (error) => {
       toast.error("Failed to end interview session", {
         description: error.message,
       })
-      // Still navigate away even if the API fails
       router.push("/dashboard")
     },
   })
 
   const handleEndCall = async () => {
     try {
-      // Only call endInterviewSession if it exists
-      if (typeof endInterviewSession === 'function') {
-        endInterviewSession();
-      }
-      // End the Stream call first
+      endInterviewSession?.();
       await call?.endCall()
-      // Then call your API to update database and generate report
       endCallMutation.mutate()
     } catch (error) {
       console.error("Error ending call:", error)
-      // Still try to call the API and navigate
       endCallMutation.mutate()
     }
   }
@@ -82,13 +72,16 @@ export default function EndCallButton({ roomCode, endInterviewSession }: EndCall
     <button
       onClick={handleEndCall}
       disabled={endCallMutation.isPending || !currentRoomCode}
-      className="flex items-center justify-center w-12 h-12 bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
-      title="End interview"
+      className="flex items-center justify-center w-auto px-4 h-10 bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-full transition-all duration-200 font-medium shadow-lg"
+      title="End interview for all"
     >
       {endCallMutation.isPending ? (
         <Loader2 className="w-5 h-5 animate-spin text-white" />
       ) : (
-        <PhoneOff className="w-5 h-5 text-white" />
+        <>
+            <PhoneOff className="w-5 h-5 text-white mr-2" />
+            <span>End Call</span>
+        </>
       )}
     </button>
   )
