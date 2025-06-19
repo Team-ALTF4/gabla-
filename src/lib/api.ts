@@ -24,7 +24,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
 // Auth APIs
 export const registerUser = (data: any) => fetchWithAuth('/api/auth/register', { method: 'POST', body: JSON.stringify(data) });
-export const loginUser = (data: any) => fetchWithAuth('/api/auth/login', { method: 'POST', body: JSON.stringify(data) });
+export const loginUser = (data: Record<string, unknown>) => fetchWithAuth('/api/auth/login', { method: 'POST', body: JSON.stringify(data) });
 
 // Interview APIs
 export const createInterview = (data: any) => fetchWithAuth('/api/interview/create', { method: 'POST', body: JSON.stringify(data) });

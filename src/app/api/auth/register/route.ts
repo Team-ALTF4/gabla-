@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({ data: { email, name, password: hashedPassword } });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json(userWithoutPassword, { status: 201 });
   } catch (error) {

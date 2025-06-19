@@ -75,8 +75,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
 
-  } catch (error: any) {
-    console.error("Judge0 API Error:", error.response?.data || error.message);
+  } catch (error) {
+    const err = error as any;
+    console.error("Judge0 API Error:", err.response?.data || err.message);
     return NextResponse.json({ error: 'Failed to execute code.' }, { status: 500 });
   }
 }
