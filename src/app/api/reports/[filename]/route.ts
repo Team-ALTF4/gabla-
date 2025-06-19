@@ -5,9 +5,9 @@ import path from 'node:path';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
+  context: { params: { filename: string } }
 ) {
-  const { filename } = params;
+  const { filename } = context.params;
 
   // Basic security: prevent path traversal attacks
   if (!filename || filename.includes('..')) {
@@ -30,6 +30,6 @@ export async function GET(
   } catch (error) {
     // If file doesn't exist
     console.error(`Report not found: ${filename}`, error);
-    return new NextResponse('Report not found', { status: 404 });
+    return new NextResponse('An internal server error occurred while retrieving the report.', { status: 500 });
   }
 }
