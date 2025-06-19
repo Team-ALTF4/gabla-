@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { PhoneOff, Loader2 } from "lucide-react"
-import { useAuthStore } from "@/store/useAuthStore"
+import { useAuthStore } from "@/app/store/useAuthStore"
 
 const endInterview = async (roomCode: string, token: string | null) => {
   const response = await fetch(`/api/interview/end`, {
