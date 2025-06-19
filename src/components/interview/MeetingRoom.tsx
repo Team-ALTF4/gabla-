@@ -436,7 +436,8 @@ export default function MeetingRoom({ roomCode, endInterviewSession = () => {} }
           <div className="w-px h-8 bg-slate-600 mx-2" />
 
           {/* End Call */}
-          <EndCallButton roomCode={roomCode} endInterviewSession={endInterviewSession} />
+          // The new, correct code
+          <EndCallButton endInterviewSession={endInterviewSession} />
         </div>
       </div>
 
