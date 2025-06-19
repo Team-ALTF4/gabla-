@@ -1,0 +1,56 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String?
+  password          String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  interviewSessions InterviewSession[]
+}
+
+model InterviewSession {
+  id                 String     @id @default(cuid())
+  roomCode           String     @unique
+  status             Status     @default(PENDING)
+  reportFilePath     String?    // Path to the final generated process log report
+  createdAt          DateTime   @default(now())
+  endedAt            DateTime?
+
+  // Session Configuration
+  hasWhiteboard      Boolean    @default(false)
+  hasCodingChallenge Boolean    @default(false)
+  hasQuiz            Boolean    @default(false)
+  quizTopic          String?
+  quizQuestionCount  Int?
+  quizQuestionDuration Int? // Duration in seconds
+
+  // Relations
+  interviewerId String
+  interviewer   User         @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
+  processLogs   ProcessLog[]
+}
+
+model ProcessLog {
+  id                 String           @id @default(cuid())
+  logContent         String
+  loggedAt           DateTime         @default(now())
+  interviewSessionId String
+  interviewSession   InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
+}
+
+enum Status {
+  PENDING
+  ACTIVE
+  ENDED
+}
