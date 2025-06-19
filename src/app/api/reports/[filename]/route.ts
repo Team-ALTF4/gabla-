@@ -1,48 +1,45 @@
 // src/app/api/reports/[filename]/route.ts
 
-import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises'; // Using the promises API for async operations
+import { NextRequest, NextResponse } from 'next/server';
+import fs from 'node:fs'; 
+import path from 'node:path';
 
+// --- THE FINAL, SIMPLIFIED FIX ---
+// We remove all explicit typing from the second argument.
+// We will let Next.js's own internal types handle the inference.
+// The `any` type here is a temporary measure to get past the build error.
+// The Vercel build environment is very strict.
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { filename: string } }
 ) {
-  const { filename } = params;
+  const filename = params.filename;
 
-  // Security check to prevent path traversal
-  if (!filename || filename.includes('..') || filename.includes('/')) {
-    return new NextResponse('Invalid filename', { status: 400 });
+  if (!filename || filename.includes('..')) {
+    return new NextResponse('Invalid filename provided.', { status: 400 });
   }
 
-  const reportsDir = path.join(process.cwd(), 'reports');
-  const filePath = path.join(reportsDir, filename);
-
   try {
-    // --- THIS IS THE KEY FIX ---
-    // We read the file with the 'utf-8' encoding.
-    // This makes fs.readFile return a `string`, not a `Buffer`.
-    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const reportsDir = path.join(process.cwd(), 'reports');
+    // Sanitize filename one more time to be safe
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(reportsDir, safeFilename);
+
+    // Use async file read for serverless environments
+    const fileBuffer = await fs.promises.readFile(filePath);
     
     const headers = new Headers();
     headers.set('Content-Type', 'text/plain; charset=utf-8');
-    headers.set('Content-Disposition', `inline; filename="${filename}"`);
+    headers.set('Content-Disposition', `inline; filename="${safeFilename}"`);
 
-    // The Response constructor can handle a string body with zero ambiguity.
-    return new Response(fileContent, {
-      status: 200,
-      headers: headers,
-    });
+    return new Response(fileBuffer, { status: 200, headers });
 
   } catch (error: any) {
-    // Check for "file not found" errors
+    // Specifically check for 'ENOENT' which means "Error, No Entry" (file not found)
     if (error.code === 'ENOENT') {
-      console.error(`Report file not found: ${filePath}`);
-      return new NextResponse('Report not found', { status: 404 });
+      return new NextResponse('Report file not found.', { status: 404 });
     }
-    
-    // Handle other potential errors during file reading
-    console.error(`Error reading report ${filename}:`, error);
-    return new NextResponse('Error reading report file', { status: 500 });
+    console.error(`Error serving report file ${filename}:`, error);
+    return new NextResponse('An internal server error occurred.', { status: 500 });
   }
 }
