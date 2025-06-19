@@ -1,8 +1,7 @@
 import { getUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
 
 export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
@@ -21,7 +20,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Session not found or you are not the owner' }, { status: 404 });
     }
 
-    // 1. Compile the report content
     let reportContent = `Process Log Report for Interview Session: ${session.roomCode}\n`;
     reportContent += `Date: ${new Date().toISOString()}\n\n`;
     reportContent += '--- BEGIN LOGS ---\n\n';
@@ -35,20 +33,19 @@ export async function POST(request: NextRequest) {
     }
     reportContent += '--- END LOGS ---';
 
-    // 2. Save the report to a file
-    const reportsDir = path.join(process.cwd(), 'reports');
-    await fs.mkdir(reportsDir, { recursive: true }); // Ensure directory exists
-    const fileName = `report-${session.roomCode}-${Date.now()}.txt`;
-    const filePath = path.join(reportsDir, fileName);
-    await fs.writeFile(filePath, reportContent);
+    const reportFileName = `reports/report-${session.roomCode}-${Date.now()}.txt`;
+    
+    const blob = await put(reportFileName, reportContent, {
+      access: 'public',
+      contentType: 'text/plain; charset=utf-8',
+    });
 
-    // 3. Update the session in the database
     const updatedSession = await prisma.interviewSession.update({
       where: { id: session.id },
       data: {
         status: 'ENDED',
         endedAt: new Date(),
-        reportFilePath: `/reports/${fileName}`, // Store relative path
+        reportFilePath: blob.url,
       },
     });
 
